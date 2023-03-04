@@ -16,7 +16,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(),
+      home: const MyHomePage(),
     );
   }
 }
@@ -37,7 +37,11 @@ class MyHomePage extends StatelessWidget {
   void show(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      builder: (_) => const Logs(),
+      isScrollControlled: true,
+      builder: (_) => const FractionallySizedBox(
+        heightFactor: 0.7,
+        child: Logs(),
+      ),
     );
   }
 
@@ -49,11 +53,17 @@ class MyHomePage extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ElevatedButton(
-              onPressed: readKit,
+              onPressed: () {
+                readKit();
+                show(context);
+              },
               child: const Text('Flutter NFC Kit'),
             ),
             ElevatedButton(
-              onPressed: readManager,
+              onPressed: () {
+                readManager();
+                show(context);
+              },
               child: const Text('NFC Manager'),
             ),
           ],
@@ -82,11 +92,13 @@ class Logs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FractionallySizedBox(
-      heightFactor: 0.7,
+    return Ink(
+      padding: const EdgeInsets.all(20),
       child: StreamBuilder<String>(
         builder: (_, snap) {
-          return Text(snap.data ?? '');
+          return SingleChildScrollView(
+            child: Text(snap.data ?? 'Logs empty'),
+          );
         },
       ),
     );
