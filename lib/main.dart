@@ -46,7 +46,7 @@ class MyHomePage extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       builder: (_) => FractionallySizedBox(
-        heightFactor: 0.7,
+        heightFactor: 0.85,
         child: Logs(),
       ),
     );
