@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
 import 'package:nfc_manager/nfc_manager.dart';
@@ -25,12 +28,16 @@ class MyHomePage extends StatelessWidget {
   const MyHomePage({super.key});
 
   void readKit() {
-    FlutterNfcKit.poll().then(Logs.logsStream);
+    FlutterNfcKit.poll().then((tag) {
+      Logs.add(tag, 'KIT');
+    });
   }
 
   void readManager() {
     NfcManager.instance.startSession(
-      onDiscovered: (tag) async => Logs.logsStream(tag),
+      onDiscovered: (tag) async {
+        Logs.add(tag, 'MAN');
+      },
     );
   }
 
@@ -38,7 +45,7 @@ class MyHomePage extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (_) => const FractionallySizedBox(
+      builder: (_) => FractionallySizedBox(
         heightFactor: 0.7,
         child: Logs(),
       ),
@@ -84,23 +91,71 @@ class MyHomePage extends StatelessWidget {
 }
 
 class Logs extends StatelessWidget {
-  const Logs({super.key});
+  Logs({super.key});
 
-  static Stream<String> logsStream(value) async* {
-    yield value.toString();
+  static final _stream = StreamController<String>.broadcast(sync: true);
+
+  static void add(dynamic tag, String source) {
+    late final String st;
+    if (tag is NFCTag) st = tag.st;
+    if (tag is NfcTag) st = tag.st;
+    print('$source: $st');
+    _stream.add('$source: $st');
   }
+
+  static Stream<String> logsStream() => _stream.stream;
+
+  String data = 'Empty logs';
 
   @override
   Widget build(BuildContext context) {
     return Ink(
       padding: const EdgeInsets.all(20),
       child: StreamBuilder<String>(
+        stream: Logs.logsStream(),
         builder: (_, snap) {
+          data += '${snap.data ?? ''}\n';
           return SingleChildScrollView(
-            child: Text(snap.data ?? 'Logs empty'),
+            child: Text(data),
           );
         },
       ),
     );
+  }
+}
+
+extension S1 on NFCTag {
+  String get st {
+    final props = [
+      type,
+      standard,
+      id,
+      atqa,
+      sak,
+      historicalBytes,
+      hiLayerResponse,
+      protocolInfo,
+      applicationData,
+      manufacturer,
+      systemCode,
+      dsfId,
+      ndefAvailable,
+      ndefType,
+      ndefCapacity,
+      ndefWritable,
+      ndefCanMakeReadOnly,
+      webUSBCustomProbeData,
+    ];
+    return props.join('\n');
+  }
+}
+
+extension S2 on NfcTag {
+  String get st {
+    final props = [
+      handle,
+      const JsonEncoder.withIndent('  ').convert(data),
+    ];
+    return props.join('\n');
   }
 }
