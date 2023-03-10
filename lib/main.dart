@@ -25,14 +25,65 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends StatelessWidget {
   const MyHomePage({super.key});
 
-  String hexToDec(String hex) => (hex.splitByLength(2).split(' ')..removeLast())
-      .map((e) => int.tryParse('0x$e'))
-      .join(' ');
+  double decToNormalView(int number) {
+    final string = number.toString();
+    double result = double.parse(string);
+    if (string.length > 2) {
+      final s = '${string.substring(0, 2)}.${string.substring(2)}';
+      result = double.parse(s);
+    }
+    return result;
+  }
+
+  List<String> hexTo4Digits(String hex) => hex
+      .replaceAllMapped(RegExp(r'.{4}'), (match) => '${match.group(0)} ')
+      .split(' ')
+    ..removeLast();
+
+  Map<String, List>hexTo2Columns(List<String> hexes) {
+    List oddList = [];
+    List evenList = [];
+
+    for (int i = 0; i < hexes.length; i++) {
+      if (i.isEven) {
+        evenList.add(hexes[i]);
+      } else if (i.isOdd) {
+        oddList.add(hexes[i]);
+      }
+    }
+
+    return {
+      'even': evenList,
+      'odd': oddList,
+    };
+  }
+
+  List<String> hexToLines(String hex) {
+    final columns = hexTo2Columns(hexTo4Digits(hex));
+    final even = columns['even'] ?? [];
+    final odd = columns['odd'] ?? [];
+    final lines = <String>[];
+
+    for (int i = 0; i < even.length; i++) {
+      String line = '';
+      final temp = int.tryParse(even[i], radix: 16) ?? 0;
+      final wet = int.tryParse(odd[i], radix: 16) ?? 0;
+
+      line += decToNormalView(temp).toString();
+      line += '\t';
+      line += decToNormalView(wet).toString();
+
+      lines.add(line);
+    }
+    return lines;
+  }
 
   void readKit() async {
     await FlutterNfcKit.poll();
     final r = await FlutterNfcKit.transceive('22233b589e43080104e0000f');
-    Logs.add(r.splitByLength(2));
+    final lines = hexToLines(r);
+    Logs.add(lines.join('\n'));
+    // Logs.add(r.splitByLength());
   }
 
   @override
@@ -116,9 +167,4 @@ extension S1 on NFCTag {
     ];
     return props.join('\n');
   }
-}
-
-extension on String {
-  String splitByLength(int length) => toUpperCase()
-      .replaceAllMapped(RegExp(r'.{2}'), (match) => '${match.group(0)} ');
 }
