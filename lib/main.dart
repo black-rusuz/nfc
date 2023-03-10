@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
-import 'package:nfc_manager/nfc_manager.dart';
 
 void main() {
   runApp(const MyApp());
@@ -27,62 +25,35 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends StatelessWidget {
   const MyHomePage({super.key});
 
-  void readKit() {
-    FlutterNfcKit.poll().then((tag) {
-      Logs.add(tag, 'KIT');
-    });
-  }
+  String hexToDec(String hex) => (hex.splitByLength(2).split(' ')..removeLast())
+      .map((e) => int.tryParse('0x$e'))
+      .join(' ');
 
-  void readManager() {
-    NfcManager.instance.startSession(
-      onDiscovered: (tag) async {
-        Logs.add(tag, 'MAN');
-      },
-    );
-  }
-
-  void show(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => FractionallySizedBox(
-        heightFactor: 0.85,
-        child: Logs(),
-      ),
-    );
+  void readKit() async {
+    await FlutterNfcKit.poll();
+    final r = await FlutterNfcKit.transceive('22233b589e43080104e0000f');
+    Logs.add(r.splitByLength(2));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ElevatedButton(
-              onPressed: () {
-                readKit();
-                show(context);
-              },
-              child: const Text('Flutter NFC Kit'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                readManager();
-                show(context);
-              },
-              child: const Text('NFC Manager'),
-            ),
-          ],
-        ),
+        child: Logs(),
       ),
       bottomSheet: InkWell(
-        onTap: () => show(context),
+        onTap: readKit,
         child: Ink(
-          color: Colors.blue[200],
           height: 60,
+          color: Colors.blue[300],
           child: const Center(
-            child: Text('Logs'),
+            child: Text(
+              'Отсканировать',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16),
+            ),
           ),
         ),
       ),
@@ -95,17 +66,14 @@ class Logs extends StatelessWidget {
 
   static final _stream = StreamController<String>.broadcast(sync: true);
 
-  static void add(dynamic tag, String source) {
-    late final String st;
-    if (tag is NFCTag) st = tag.st;
-    if (tag is NfcTag) st = tag.st;
-    print('$source: $st');
-    _stream.add('$source: $st');
+  static void add(String data) {
+    print(data);
+    _stream.add('$data\n');
   }
 
   static Stream<String> logsStream() => _stream.stream;
 
-  String data = 'Empty logs';
+  String data = 'Empty logs\n';
 
   @override
   Widget build(BuildContext context) {
@@ -150,12 +118,7 @@ extension S1 on NFCTag {
   }
 }
 
-extension S2 on NfcTag {
-  String get st {
-    final props = [
-      handle,
-      const JsonEncoder.withIndent('  ').convert(data),
-    ];
-    return props.join('\n');
-  }
+extension on String {
+  String splitByLength(int length) => toUpperCase()
+      .replaceAllMapped(RegExp(r'.{2}'), (match) => '${match.group(0)} ');
 }
